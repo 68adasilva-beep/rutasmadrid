@@ -413,11 +413,12 @@ let markers = [];
 let travelMode = 'driving';
 let debounceTimer = null;
 let optimizedStops = null;
-let roundTrip = false; // ida y vuelta al origen
+let roundTrip = false;
 
 const STORAGE_KEY = 'rutaMadrid_rutas';
 let savedRoutes = [];
 
+// Rutas guardadas
 function loadSavedRoutes() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -474,7 +475,7 @@ function cargarRuta() {
   showToast(`Ruta "${route.name}" cargada.`, 'success');
 }
 
-// FAVORITO
+// Favorito
 function addFavoriteStop(key) {
   if (key === 'donacion') {
     const favStop = {
@@ -667,8 +668,8 @@ function updateMarkers() {
     const isFirst = i === 0;
     const isLast = i === stops.length - 1 && stops.length > 1;
     let color = colors[i % colors.length];
-    if (isFirst) color = '#81c784';   // origen verde pastel
-    if (isLast) color = '#f0625f';    // destino rojo suave
+    if (isFirst) color = '#81c784';
+    if (isLast) color = '#f0625f';
 
     const icon = L.divIcon({
       className: '',
@@ -760,17 +761,21 @@ async function calcularRuta() {
   try {
     const profile = OSRM_PROFILES[travelMode];
 
-    let coordsStops = [...stops];
-
-    if (roundTrip && coordsStops.length >= 2) {
-      coordsStops[coordsStops.length - 1] = coordsStops[0];
+    // Lista de coordenadas que se envían a OSRM
+    let coordsStops;
+    if (roundTrip) {
+      // añadimos el origen al final SOLO para el cálculo
+      coordsStops = [...stops, stops[0]];
+    } else {
+      coordsStops = [...stops];
     }
 
     const coords = coordsStops.map(s => `${s.lon},${s.lat}`).join(';');
 
-    const url = `https://router.project-osrm.org/trip/v1/${profile}/${coords}` +
-                `?roundtrip=false&source=first&destination=last&steps=true` +
-                `&geometries=geojson&overview=full`;
+    const url =
+      `https://router.project-osrm.org/trip/v1/${profile}/${coords}` +
+      `?roundtrip=false&source=first&destination=last&steps=true` +
+      `&geometries=geojson&overview=full`;
 
     const res = await fetch(url);
     const data = await res.json();
@@ -782,8 +787,7 @@ async function calcularRuta() {
 
     const trip = data.trips[0];
     const waypoints = data.waypoints;
-    displayTrip(trip, waypoints);
-
+    displayTrip(trip, waypoints, coordsStops.length);
   } catch(e) {
     showToast('Error de conexión. Verifica tu internet.', 'error');
     console.error(e);
@@ -792,10 +796,11 @@ async function calcularRuta() {
   }
 }
 
-function displayTrip(trip, waypoints) {
+function displayTrip(trip, waypoints, coordsCount) {
+  // Línea azul principal + sombra
   routeLayer = L.geoJSON(trip.geometry, {
     style: {
-      color: '#f0625f',
+      color: '#1e88e5',   // azul principal
       weight: 4,
       opacity: 0.9,
       lineCap: 'round',
@@ -805,7 +810,7 @@ function displayTrip(trip, waypoints) {
 
   L.geoJSON(trip.geometry, {
     style: {
-      color: '#ffb3b0',
+      color: '#90caf9',   // sombra azul clara
       weight: 10,
       opacity: 0.25,
       lineCap: 'round'
@@ -814,21 +819,32 @@ function displayTrip(trip, waypoints) {
 
   map.fitBounds(routeLayer.getBounds().pad(0.1));
 
-// Orden óptimo según OSRM usando waypoint_index [web:44]
-const orderedStops = [];
-waypoints.forEach(wp => {
-  orderedStops[wp.waypoint_index] = stops[wp.trips_index ?? wp.waypoint_index];
-});
+  // Reconstruir orden de paradas según waypoint_index [web:44][web:67]
+  const hasRoundTrip = roundTrip;
+  const ordered = new Array(waypoints.length);
 
-// Filtramos posibles huecos por seguridad
-const finalOrdered = orderedStops.filter(Boolean);
+  waypoints.forEach((wp, idx) => {
+    const tripIdx = wp.waypoint_index; // posición final en la ruta
+    const originalIdx = idx;           // posición en coordsStops
 
-if (finalOrdered.length === stops.length) {
-  stops = finalOrdered;
-  optimizedStops = finalOrdered;
-  renderStops();
-}
+    // Si es vuelta al origen, el último coordsStops es el origen duplicado:
+    // no creamos parada nueva en la lista visual.
+    if (hasRoundTrip && originalIdx === coordsCount - 1) {
+      return;
+    }
 
+    ordered[tripIdx] = stops[originalIdx] || stops[0];
+  });
+
+  const finalOrdered = ordered.filter(Boolean);
+
+  if (finalOrdered.length === stops.length) {
+    stops = finalOrdered;
+    optimizedStops = finalOrdered;
+    renderStops();
+  }
+
+  // Estadísticas globales
   const totalDist = (trip.distance / 1000).toFixed(1);
   const totalMin = Math.round(trip.duration / 60);
   const totalHrs = Math.floor(totalMin / 60);
@@ -850,14 +866,17 @@ if (finalOrdered.length === stops.length) {
         <div class="stat-label">DISTANCIA</div>
       </div>
     </div>
-    <div style="font-size:11px; color:var(--muted); margin-bottom:12px;">${modeLabel} · ${stops.length} paradas (orden optimizado)</div>
+    <div style="font-size:11px; color:var(--muted); margin-bottom:12px;">
+      ${modeLabel} · ${stops.length} paradas (orden optimizado)
+      ${hasRoundTrip ? ' · ida y vuelta' : ''}
+    </div>
     <div class="section-title" style="margin-bottom:10px;">🗺️ RECORRIDO</div>
     <div class="route-steps">
   `;
 
   trip.legs.forEach((leg, i) => {
     const from = stops[i].name.split(',')[0];
-    const to   = stops[i+1].name.split(',')[0];
+    const to   = stops[(i+1) % stops.length].name.split(',')[0];
     const dist = (leg.distance / 1000).toFixed(1);
     const mins = Math.round(leg.duration / 60);
     const hh   = Math.floor(mins / 60);
