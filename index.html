@@ -13,16 +13,16 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   :root {
-    --bg: #0a0a0f;
-    --panel: #111118;
-    --panel2: #16161f;
-    --border: #2a2a3a;
-    --accent: #ff3c3c;
-    --accent2: #ff8c42;
-    --green: #39d98a;
-    --blue: #4f8ef7;
-    --text: #e8e8f0;
-    --muted: #6b6b80;
+    --bg: #fafdff;
+    --panel: #ffffff;
+    --panel2: #ffffff;
+    --border: #dde2ee;
+    --accent: #f0625f;   /* rojo suave */
+    --accent2: #ffb74d;  /* naranja suave */
+    --green: #81c784;    /* verde pastel */
+    --blue: #64b5f6;     /* azul pastel */
+    --text: #1b2130;
+    --muted: #8a90a0;
     --radius: 12px;
   }
   * { margin:0; padding:0; box-sizing:border-box; }
@@ -48,8 +48,8 @@
   .logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.5px; }
   .logo span { color: var(--accent); }
   .badge {
-    background: rgba(255,60,60,0.12);
-    border: 1px solid rgba(255,60,60,0.3);
+    background: rgba(240,98,95,0.08);
+    border: 1px solid rgba(240,98,95,0.4);
     color: var(--accent);
     font-size: 10px;
     padding: 3px 10px;
@@ -78,9 +78,12 @@
     width:100%; background:var(--panel2); border:1px solid var(--border);
     border-radius:var(--radius); padding:12px 14px 12px 42px;
     color:var(--text); font-family:'DM Mono',monospace; font-size:13px;
-    outline:none; transition:border-color 0.2s;
+    outline:none; transition:border-color 0.2s, box-shadow 0.2s;
   }
-  .search-input:focus { border-color:var(--accent); }
+  .search-input:focus {
+    border-color:var(--blue);
+    box-shadow:0 0 0 2px rgba(100,181,246,0.25);
+  }
   .search-input::placeholder { color:var(--muted); }
   .search-icon {
     position:absolute; left:14px; top:50%;
@@ -91,6 +94,7 @@
     background:var(--panel2); border:1px solid var(--border);
     border-radius:var(--radius); z-index:999; max-height:200px;
     overflow-y:auto; display:none;
+    box-shadow:0 8px 18px rgba(15,23,42,0.08);
   }
   .autocomplete-list.open { display:block; }
   .autocomplete-item {
@@ -99,17 +103,17 @@
     line-height:1.4;
   }
   .autocomplete-item:last-child { border-bottom:none; }
-  .autocomplete-item:hover { background:rgba(255,255,255,0.05); }
+  .autocomplete-item:hover { background:rgba(100,181,246,0.08); }
   .autocomplete-item .item-name { color:var(--text); }
   .autocomplete-item .item-addr { color:var(--muted); font-size:11px; }
 
   .add-btn {
-    width:100%; padding:11px; background:rgba(255,60,60,0.1);
-    border:1px dashed rgba(255,60,60,0.4); border-radius:var(--radius);
+    width:100%; padding:11px; background:rgba(240,98,95,0.06);
+    border:1px dashed rgba(240,98,95,0.7); border-radius:var(--radius);
     color:var(--accent); font-family:'Syne',sans-serif; font-weight:600;
     font-size:13px; cursor:pointer; transition:all 0.2s; margin-top:8px;
   }
-  .add-btn:hover { background:rgba(255,60,60,0.18); }
+  .add-btn:hover { background:rgba(240,98,95,0.12); }
   .add-btn:disabled { opacity:0.4; cursor:not-allowed; }
 
   .stops-list { margin-top:20px; display:flex; flex-direction:column; gap:8px; }
@@ -117,27 +121,30 @@
     background:var(--panel2); border:1px solid var(--border);
     border-radius:var(--radius); padding:12px 14px;
     display:flex; align-items:center; gap:10px; cursor:grab;
-    transition:border-color 0.2s; position:relative;
+    transition:border-color 0.2s, box-shadow 0.2s; position:relative;
   }
-  .stop-item:hover { border-color:#3a3a4a; }
+  .stop-item:hover {
+    border-color:var(--blue);
+    box-shadow:0 4px 10px rgba(15,23,42,0.06);
+  }
   .stop-number {
     width:26px; height:26px; border-radius:50%;
     display:flex; align-items:center; justify-content:center;
     font-family:'Syne',sans-serif; font-weight:800; font-size:12px;
     flex-shrink:0;
   }
-  .stop-number.origin { background:var(--green); color:#000; }
+  .stop-number.origin { background:var(--green); color:#0b3012; }
   .stop-number.dest { background:var(--accent); color:#fff; }
-  .stop-number.waypoint { background:var(--blue); color:#fff; }
+  .stop-number.waypoint { background:var(--blue); color:#0b1c30; }
   .stop-info { flex:1; min-width:0; }
   .stop-name { font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .stop-tag { font-size:10px; color:var(--muted); margin-top:2px; }
+  .stop-tag { font-size:10px; color:var(--muted); margin-top:2px; text-transform:uppercase; letter-spacing:0.5px; }
   .stop-del {
     background:none; border:none; color:var(--muted); cursor:pointer;
     font-size:16px; line-height:1; padding:2px 4px; border-radius:4px;
-    transition:color 0.2s;
+    transition:color 0.2s, background 0.2s;
   }
-  .stop-del:hover { color:var(--accent); }
+  .stop-del:hover { color:var(--accent); background:rgba(240,98,95,0.08); }
 
   .saved-routes {
     margin-top:18px; padding-top:12px; border-top:1px dashed var(--border);
@@ -159,6 +166,7 @@
 
   .controls {
     padding:16px 20px; border-top:1px solid var(--border);
+    background:var(--panel);
     display:flex; flex-direction:column; gap:10px;
   }
   .mode-row { display:flex; gap:8px; }
@@ -169,7 +177,7 @@
     font-size:11px; cursor:pointer; transition:all 0.2s; text-align:center;
   }
   .mode-btn.active {
-    background:rgba(79,142,247,0.15);
+    background:rgba(100,181,246,0.12);
     border-color:var(--blue); color:var(--blue);
   }
   .calc-btn {
@@ -178,7 +186,7 @@
     font-weight:700; font-size:15px; cursor:pointer;
     transition:all 0.2s; letter-spacing:0.5px;
   }
-  .calc-btn:hover { background:#ff5555; transform:translateY(-1px); }
+  .calc-btn:hover { background:#e4514d; transform:translateY(-1px); }
   .calc-btn:disabled { opacity:0.4; cursor:not-allowed; transform:none; }
 
   .results-panel {
@@ -189,6 +197,7 @@
   .stat-box {
     flex:1; background:var(--panel); border:1px solid var(--border);
     border-radius:10px; padding:12px; text-align:center;
+    box-shadow:0 3px 8px rgba(15,23,42,0.04);
   }
   .stat-value {
     font-family:'Syne',sans-serif; font-weight:800;
@@ -208,9 +217,9 @@
   .step-time { color:var(--muted); font-size:11px; white-space:nowrap; }
 
   #map { flex:1; z-index:1; }
-  .leaflet-container { background:#ffffff; }
+  .leaflet-container { background:#e3f2fd; }
   .loading-overlay {
-    position:absolute; inset:0; background:rgba(10,10,15,0.85);
+    position:absolute; inset:0; background:rgba(245,248,255,0.92);
     display:flex; align-items:center; justify-content:center;
     z-index:9999; backdrop-filter:blur(4px); display:none;
   }
@@ -227,9 +236,10 @@
   .toast {
     position:fixed; bottom:24px; left:50%;
     transform:translateX(-50%) translateY(80px);
-    background:#1e1e2a; border:1px solid var(--border);
+    background:#ffffff; border:1px solid var(--border);
     border-radius:10px; padding:12px 20px; font-size:13px;
     z-index:9999; transition:transform 0.3s; max-width:360px; text-align:center;
+    box-shadow:0 8px 18px rgba(15,23,42,0.12);
   }
   .toast.show { transform:translateX(-50%) translateY(0); }
   .toast.error { border-color:var(--accent); color:var(--accent); }
@@ -324,6 +334,24 @@
       >
         ⟳ Volver al origen (desactivado)
       </button>
+
+      <button
+        type="button"
+        onclick="nuevaRuta()"
+        style="
+          margin-top:6px;
+          padding:8px 10px;
+          border-radius:8px;
+          border:1px solid var(--border);
+          background:var(--panel2);
+          color:var(--muted);
+          font-family:'DM Mono',monospace;
+          font-size:11px;
+          cursor:pointer;
+        "
+      >
+        🧹 Nueva ruta (borrar paradas)
+      </button>
     </div>
 
     <div class="results-panel" id="resultsPanel" style="display:none;"></div>
@@ -341,7 +369,7 @@
 
 <div class="toast" id="toast"></div>
 
-<div style="position:fixed; bottom:4px; right:10px; font-size:10px; color:#6b6b80;">
+<div style="position:fixed; bottom:4px; right:10px; font-size:10px; color:#8a90a0;">
   © 2026 · Hecho por Alberto Da Silva
 </div>
 
@@ -374,7 +402,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 L.rectangle(
   [[MADRID_BOUNDS.south, MADRID_BOUNDS.west],[MADRID_BOUNDS.north, MADRID_BOUNDS.east]],
-  { color: '#ff3c3c', weight: 1.5, fill: false, dashArray: '6,6', opacity: 0.3 }
+  { color: '#f0625f', weight: 1.5, fill: false, dashArray: '6,6', opacity: 0.4 }
 ).addTo(map);
 
 // STATE
@@ -633,24 +661,24 @@ function updateMarkers() {
   markers.forEach(m => map.removeLayer(m));
   markers = [];
 
-  const colors = ['#39d98a','#4f8ef7','#ff8c42','#a78bfa','#34d399','#f472b6','#fb923c','#60a5fa','#facc15','#f87171'];
+  const colors = ['#81c784','#64b5f6','#ffb74d','#b39ddb','#4db6ac','#f48fb1','#ffcc80','#90caf9','#fff59d','#ef9a9a'];
 
   stops.forEach((stop, i) => {
     const isFirst = i === 0;
     const isLast = i === stops.length - 1 && stops.length > 1;
     let color = colors[i % colors.length];
-    if (isFirst) color = '#39d98a';
-    if (isLast) color = '#ff3c3c';
+    if (isFirst) color = '#81c784';   // origen verde pastel
+    if (isLast) color = '#f0625f';    // destino rojo suave
 
     const icon = L.divIcon({
       className: '',
       html: `<div style="
         width:32px; height:32px; border-radius:50% 50% 50% 0; transform:rotate(-45deg);
-        background:${color}; border:2px solid #fff;
+        background:${color}; border:2px solid #ffffff;
         display:flex; align-items:center; justify-content:center;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+        box-shadow: 0 2px 8px rgba(15,23,42,0.25);
       ">
-        <span style="transform:rotate(45deg); font-family:'Syne',sans-serif; font-weight:800; font-size:11px; color:#000;">${i+1}</span>
+        <span style="transform:rotate(45deg); font-family:'Syne',sans-serif; font-weight:800; font-size:11px; color:#0b1c30;">${i+1}</span>
       </div>`,
       iconSize: [32,32],
       iconAnchor: [16,32],
@@ -695,6 +723,27 @@ function toggleRoundTrip() {
   }
 }
 
+function nuevaRuta() {
+  if (!confirm('¿Seguro que quieres borrar todas las paradas de la ruta actual?')) return;
+
+  stops = [];
+  selectedPlace = null;
+  optimizedStops = null;
+
+  const list = document.getElementById('stopsList');
+  list.innerHTML = '<div class="no-stops-msg" id="emptyMsg">Añade al menos 2 paradas para calcular la ruta</div>';
+
+  markers.forEach(m => map.removeLayer(m));
+  markers = [];
+
+  clearRoute();
+  updateCalcBtn();
+
+  map.setView([40.4168, -3.7038], 11);
+
+  showToast('Ruta reiniciada.', 'success');
+}
+
 // OSRM TRIP (TSP)
 const OSRM_PROFILES = {
   driving: 'driving',
@@ -711,11 +760,8 @@ async function calcularRuta() {
   try {
     const profile = OSRM_PROFILES[travelMode];
 
-    // Clonamos las paradas para aplicar ida/vuelta si procede
     let coordsStops = [...stops];
 
-    // Si "Volver al origen" está activado y hay al menos 2 paradas,
-    // forzamos que el último punto sea igual que el primero
     if (roundTrip && coordsStops.length >= 2) {
       coordsStops[coordsStops.length - 1] = coordsStops[0];
     }
@@ -749,9 +795,9 @@ async function calcularRuta() {
 function displayTrip(trip, waypoints) {
   routeLayer = L.geoJSON(trip.geometry, {
     style: {
-      color: '#ff3c3c',
-      weight: 5,
-      opacity: 0.85,
+      color: '#f0625f',
+      weight: 4,
+      opacity: 0.9,
       lineCap: 'round',
       lineJoin: 'round'
     }
@@ -759,16 +805,15 @@ function displayTrip(trip, waypoints) {
 
   L.geoJSON(trip.geometry, {
     style: {
-      color: '#ff6060',
-      weight: 12,
-      opacity: 0.15,
+      color: '#ffb3b0',
+      weight: 10,
+      opacity: 0.25,
       lineCap: 'round'
     }
   }).addTo(map);
 
   map.fitBounds(routeLayer.getBounds().pad(0.1));
 
-  // Orden óptimo devuelto por OSRM (manteniendo origen y destino fijos) [web:44][web:170]
   const orderedStops = [];
   waypoints
     .sort((a, b) => a.waypoint_index - b.waypoint_index)
@@ -855,8 +900,8 @@ function displayTrip(trip, waypoints) {
         padding:10px 14px;
         border-radius:8px;
         border:1px solid var(--blue);
-        background:rgba(79,142,247,0.12);
-        color:#000;
+        background:rgba(100,181,246,0.12);
+        color:#0b1c30;
         font-family:'Syne',sans-serif;
         font-size:13px;
         cursor:pointer;
