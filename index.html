@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta name="theme-color" content="#ffffff">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RutaMadrid — Optimizador de Recorridos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --panel: #111118;
+    --panel2: #16161f;
+    --border: #2a2a3a;
+    --accent: #ff3c3c;
+    --accent2: #ff8c42;
+    --green: #39d98a;
+    --blue: #4f8ef7;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --radius: 12px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'DM Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+    z-index: 100;
+  }
+  .logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.5px; }
+  .logo span { color: var(--accent); }
+  .badge {
+    background: rgba(255,60,60,0.12);
+    border: 1px solid rgba(255,60,60,0.3);
+    color: var(--accent);
+    font-size: 10px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .main { display:flex; flex:1; overflow:hidden; }
+  .sidebar {
+    width:380px; min-width:380px;
+    background:var(--panel);
+    border-right:1px solid var(--border);
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .sidebar-scroll {
+    flex:1; overflow-y:auto; padding:20px;
+    scrollbar-width:thin; scrollbar-color:var(--border) transparent;
+  }
+  .section-title {
+    font-family:'Syne',sans-serif; font-weight:700;
+    font-size:11px; letter-spacing:2px; text-transform:uppercase;
+    color:var(--muted); margin-bottom:12px;
+  }
+  .search-wrap { position:relative; margin-bottom:8px; }
+  .search-input {
+    width:100%; background:var(--panel2); border:1px solid var(--border);
+    border-radius:var(--radius); padding:12px 14px 12px 42px;
+    color:var(--text); font-family:'DM Mono',monospace; font-size:13px;
+    outline:none; transition:border-color 0.2s;
+  }
+  .search-input:focus { border-color:var(--accent); }
+  .search-input::placeholder { color:var(--muted); }
+  .search-icon {
+    position:absolute; left:14px; top:50%;
+    transform:translateY(-50%); color:var(--muted); font-size:16px;
+  }
+  .autocomplete-list {
+    position:absolute; top:calc(100% + 4px); left:0; right:0;
+    background:var(--panel2); border:1px solid var(--border);
+    border-radius:var(--radius); z-index:999; max-height:200px;
+    overflow-y:auto; display:none;
+  }
+  .autocomplete-list.open { display:block; }
+  .autocomplete-item {
+    padding:10px 14px; font-size:12px; cursor:pointer;
+    border-bottom:1px solid var(--border); transition:background 0.15s;
+    line-height:1.4;
+  }
+  .autocomplete-item:last-child { border-bottom:none; }
+  .autocomplete-item:hover { background:rgba(255,255,255,0.05); }
+  .autocomplete-item .item-name { color:var(--text); }
+  .autocomplete-item .item-addr { color:var(--muted); font-size:11px; }
+
+  .add-btn {
+    width:100%; padding:11px; background:rgba(255,60,60,0.1);
+    border:1px dashed rgba(255,60,60,0.4); border-radius:var(--radius);
+    color:var(--accent); font-family:'Syne',sans-serif; font-weight:600;
+    font-size:13px; cursor:pointer; transition:all 0.2s; margin-top:8px;
+  }
+  .add-btn:hover { background:rgba(255,60,60,0.18); }
+  .add-btn:disabled { opacity:0.4; cursor:not-allowed; }
+
+  .stops-list { margin-top:20px; display:flex; flex-direction:column; gap:8px; }
+  .stop-item {
+    background:var(--panel2); border:1px solid var(--border);
+    border-radius:var(--radius); padding:12px 14px;
+    display:flex; align-items:center; gap:10px; cursor:grab;
+    transition:border-color 0.2s; position:relative;
+  }
+  .stop-item:hover { border-color:#3a3a4a; }
+  .stop-number {
+    width:26px; height:26px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Syne',sans-serif; font-weight:800; font-size:12px;
+    flex-shrink:0;
+  }
+  .stop-number.origin { background:var(--green); color:#000; }
+  .stop-number.dest { background:var(--accent); color:#fff; }
+  .stop-number.waypoint { background:var(--blue); color:#fff; }
+  .stop-info { flex:1; min-width:0; }
+  .stop-name { font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .stop-tag { font-size:10px; color:var(--muted); margin-top:2px; }
+  .stop-del {
+    background:none; border:none; color:var(--muted); cursor:pointer;
+    font-size:16px; line-height:1; padding:2px 4px; border-radius:4px;
+    transition:color 0.2s;
+  }
+  .stop-del:hover { color:var(--accent); }
+
+  .saved-routes {
+    margin-top:18px; padding-top:12px; border-top:1px dashed var(--border);
+    font-size:11px; color:var(--muted);
+  }
+  .saved-routes-row { display:flex; gap:6px; margin-top:8px; }
+  .saved-routes select {
+    flex:1; background:var(--panel2); border:1px solid var(--border);
+    border-radius:8px; padding:6px 8px; color:var(--text);
+    font-family:'DM Mono',monospace; font-size:11px;
+  }
+  .saved-routes button {
+    padding:6px 8px; border-radius:8px; border:1px solid var(--border);
+    background:var(--panel2); color:var(--muted);
+    font-family:'DM Mono',monospace; font-size:11px;
+    cursor:pointer; transition:all 0.2s;
+  }
+  .saved-routes button:hover { border-color:var(--blue); color:var(--blue); }
+
+  .controls {
+    padding:16px 20px; border-top:1px solid var(--border);
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .mode-row { display:flex; gap:8px; }
+  .mode-btn {
+    flex:1; padding:9px; background:var(--panel2);
+    border:1px solid var(--border); border-radius:8px;
+    color:var(--muted); font-family:'DM Mono',monospace;
+    font-size:11px; cursor:pointer; transition:all 0.2s; text-align:center;
+  }
+  .mode-btn.active {
+    background:rgba(79,142,247,0.15);
+    border-color:var(--blue); color:var(--blue);
+  }
+  .calc-btn {
+    padding:14px; background:var(--accent); border:none;
+    border-radius:var(--radius); color:#fff; font-family:'Syne',sans-serif;
+    font-weight:700; font-size:15px; cursor:pointer;
+    transition:all 0.2s; letter-spacing:0.5px;
+  }
+  .calc-btn:hover { background:#ff5555; transform:translateY(-1px); }
+  .calc-btn:disabled { opacity:0.4; cursor:not-allowed; transform:none; }
+
+  .results-panel {
+    padding:20px; border-top:1px solid var(--border);
+    background:var(--panel2); max-height:280px; overflow-y:auto;
+  }
+  .result-summary { display:flex; gap:12px; margin-bottom:16px; }
+  .stat-box {
+    flex:1; background:var(--panel); border:1px solid var(--border);
+    border-radius:10px; padding:12px; text-align:center;
+  }
+  .stat-value {
+    font-family:'Syne',sans-serif; font-weight:800;
+    font-size:20px; color:var(--accent2);
+  }
+  .stat-label { font-size:10px; color:var(--muted); margin-top:2px; letter-spacing:1px; }
+  .route-steps { display:flex; flex-direction:column; gap:6px; }
+  .step-item {
+    display:flex; align-items:flex-start; gap:10px;
+    padding:8px 10px; background:var(--panel);
+    border-radius:8px; border-left:3px solid var(--border);
+    font-size:12px; line-height:1.5;
+  }
+  .step-item.segment { border-left-color:var(--blue); }
+  .step-icon { font-size:14px; flex-shrink:0; margin-top:1px; }
+  .step-text { flex:1; }
+  .step-time { color:var(--muted); font-size:11px; white-space:nowrap; }
+
+  #map { flex:1; z-index:1; }
+  .leaflet-container { background:#ffffff; }
+  .loading-overlay {
+    position:absolute; inset:0; background:rgba(10,10,15,0.85);
+    display:flex; align-items:center; justify-content:center;
+    z-index:9999; backdrop-filter:blur(4px); display:none;
+  }
+  .loading-overlay.show { display:flex; }
+  .spinner {
+    width:48px; height:48px; border:3px solid var(--border);
+    border-top-color:var(--accent); border-radius:50%;
+    animation:spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .no-stops-msg {
+    color:var(--muted); font-size:12px; text-align:center; padding:20px 0;
+  }
+  .toast {
+    position:fixed; bottom:24px; left:50%;
+    transform:translateX(-50%) translateY(80px);
+    background:#1e1e2a; border:1px solid var(--border);
+    border-radius:10px; padding:12px 20px; font-size:13px;
+    z-index:9999; transition:transform 0.3s; max-width:360px; text-align:center;
+  }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+  .toast.error { border-color:var(--accent); color:var(--accent); }
+  .toast.success { border-color:var(--green); color:var(--green); }
+
+  ::-webkit-scrollbar { width:5px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Ruta<span>Madrid</span></div>
+  <div class="badge">Comunidad de Madrid</div>
+  <div style="margin-left:auto; font-size:11px; color:var(--muted);">Optimizador de recorridos ⚡</div>
+</header>
+
+<div class="main">
+  <div class="sidebar">
+    <div class="sidebar-scroll">
+      <div class="section-title">📍 Añadir parada</div>
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" class="search-input" id="searchInput" placeholder="Buscar dirección en Madrid..." autocomplete="off"/>
+        <div class="autocomplete-list" id="autocompleteList"></div>
+      </div>
+      <button class="add-btn" id="addBtn" disabled>+ Añadir a la ruta</button>
+
+      <div class="stops-list" id="stopsList">
+        <div class="no-stops-msg" id="emptyMsg">Añade al menos 2 paradas para calcular la ruta</div>
+      </div>
+
+      <div class="saved-routes">
+        <div class="section-title" style="margin-bottom:6px;">💾 Rutas guardadas</div>
+        <div class="saved-routes-row">
+          <select id="savedSelect"></select>
+          <button onclick="guardarRuta()">Guardar</button>
+          <button onclick="cargarRuta()">Cargar</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="section-title" style="margin-bottom:8px;">🚗 Modo de transporte</div>
+      <div class="mode-row">
+        <button class="mode-btn active" data-mode="driving" onclick="setMode(this)">🚗 Coche</button>
+        <button class="mode-btn" data-mode="cycling" onclick="setMode(this)">🚲 Bici</button>
+        <button class="mode-btn" data-mode="walking" onclick="setMode(this)">🚶 A pie</button>
+      </div>
+      <button class="calc-btn" id="calcBtn" disabled onclick="calcularRuta()">
+        ⚡ CALCULAR RUTA ÓPTIMA
+      </button>
+    </div>
+
+    <div class="results-panel" id="resultsPanel" style="display:none;"></div>
+  </div>
+
+  <div id="map"></div>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div style="text-align:center;">
+    <div class="spinner"></div>
+    <div style="margin-top:14px; color:var(--muted); font-size:12px;">Calculando ruta óptima...</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div style="position:fixed; bottom:4px; right:10px; font-size:10px; color:#6b6b80;">
+  © 2026 · Hecho por Alberto Da Silva
+</div>
+
+<script>
+// MADRID BOUNDS
+const MADRID_BOUNDS = {
+  south: 39.88,
+  north: 41.17,
+  west: -4.58,
+  east: -3.05
+};
+
+function isInMadrid(lat, lon) {
+  return lat >= MADRID_BOUNDS.south && lat <= MADRID_BOUNDS.north &&
+         lon >= MADRID_BOUNDS.west && lon <= MADRID_BOUNDS.east;
+}
+
+// MAP INIT
+const map = L.map('map', {
+  center: [40.4168, -3.7038],
+  zoom: 11,
+  zoomControl: true
+});
+
+// Mapa claro OSM [web:89]
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap contributors',
+  maxZoom: 19
+}).addTo(map);
+
+L.rectangle(
+  [[MADRID_BOUNDS.south, MADRID_BOUNDS.west],[MADRID_BOUNDS.north, MADRID_BOUNDS.east]],
+  { color: '#ff3c3c', weight: 1.5, fill: false, dashArray: '6,6', opacity: 0.3 }
+).addTo(map);
+
+// STATE
+let stops = [];
+let selectedPlace = null;
+let routeLayer = null;
+let markers = [];
+let travelMode = 'driving';
+let debounceTimer = null;
+let optimizedStops = null;
+
+const STORAGE_KEY = 'rutaMadrid_rutas';
+let savedRoutes = [];
+
+function loadSavedRoutes() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    savedRoutes = raw ? JSON.parse(raw) : [];
+  } catch {
+    savedRoutes = [];
+  }
+  const select = document.getElementById('savedSelect');
+  select.innerHTML = '';
+  const opt = document.createElement('option');
+  opt.value = '';
+  opt.textContent = savedRoutes.length ? 'Selecciona una ruta' : 'Sin rutas guardadas';
+  select.appendChild(opt);
+
+  savedRoutes.forEach((r, i) => {
+    const o = document.createElement('option');
+    o.value = i;
+    o.textContent = r.name;
+    select.appendChild(o);
+  });
+}
+
+function guardarRuta() {
+  if (stops.length < 2) {
+    showToast('Necesitas al menos 2 paradas para guardar.', 'error');
+    return;
+  }
+  const name = prompt('Nombre para esta ruta:', `Ruta ${new Date().toLocaleString()}`);
+  if (!name) return;
+
+  savedRoutes.push({ name, stops });
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(savedRoutes));
+  loadSavedRoutes();
+  showToast('Ruta guardada.', 'success');
+}
+
+function cargarRuta() {
+  const select = document.getElementById('savedSelect');
+  const idx = select.value;
+  if (idx === '') {
+    showToast('Selecciona una ruta guardada.', 'error');
+    return;
+  }
+  const route = savedRoutes[Number(idx)];
+  if (!route) {
+    showToast('No se pudo cargar la ruta.', 'error');
+    return;
+  }
+  stops = route.stops;
+  optimizedStops = null;
+  renderStops();
+  updateCalcBtn();
+  clearRoute();
+  showToast(`Ruta "${route.name}" cargada.`, 'success');
+}
+
+// SEARCH + AUTOCOMPLETE
+const searchInput = document.getElementById('searchInput');
+const autocompleteList = document.getElementById('autocompleteList');
+const addBtn = document.getElementById('addBtn');
+
+searchInput.addEventListener('input', () => {
+  clearTimeout(debounceTimer);
+  const q = searchInput.value.trim();
+  selectedPlace = null;
+  addBtn.disabled = true;
+  if (q.length < 3) { autocompleteList.classList.remove('open'); return; }
+  debounceTimer = setTimeout(() => searchNominatim(q), 350);
+});
+
+searchInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') autocompleteList.classList.remove('open');
+});
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.search-wrap')) autocompleteList.classList.remove('open');
+});
+
+async function searchNominatim(query) {
+  try {
+    const q = encodeURIComponent(query + ', Comunidad de Madrid, España');
+    const url =
+      `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=6&addressdetails=1&viewbox=${MADRID_BOUNDS.west},${MADRID_BOUNDS.north},${MADRID_BOUNDS.east},${MADRID_BOUNDS.south}&bounded=1&accept-language=es`;
+    const res = await fetch(url, { headers: { 'User-Agent': 'RutaMadrid/1.0' } });
+    const data = await res.json();
+
+    autocompleteList.innerHTML = '';
+    const filtered = data.filter(r => isInMadrid(parseFloat(r.lat), parseFloat(r.lon)));
+
+    if (filtered.length === 0) {
+      autocompleteList.innerHTML =
+        '<div class="autocomplete-item"><span class="item-addr">Sin resultados en la Comunidad de Madrid</span></div>';
+      autocompleteList.classList.add('open');
+      return;
+    }
+
+    filtered.forEach(place => {
+      const div = document.createElement('div');
+      div.className = 'autocomplete-item';
+      const name = place.namedetails?.name || place.display_name.split(',')[0];
+      const addr = place.display_name;
+      div.innerHTML =
+        `<div class="item-name">${name}</div><div class="item-addr">${addr.substring(0,70)}...</div>`;
+      div.addEventListener('click', () => {
+        selectPlace(place);
+      });
+      autocompleteList.appendChild(div);
+    });
+    autocompleteList.classList.add('open');
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+function selectPlace(place) {
+  selectedPlace = {
+    name: place.display_name.split(',').slice(0,2).join(',').trim(),
+    lat: parseFloat(place.lat),
+    lon: parseFloat(place.lon),
+    display: place.display_name
+  };
+  searchInput.value = selectedPlace.name;
+  autocompleteList.classList.remove('open');
+  addBtn.disabled = false;
+  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
+}
+
+// ADD / REMOVE STOPS
+addBtn.addEventListener('click', () => {
+  if (!selectedPlace) return;
+  if (stops.length >= 10) { showToast('Máximo 10 paradas', 'error'); return; }
+
+  stops.push({ ...selectedPlace });
+  selectedPlace = null;
+  searchInput.value = '';
+  addBtn.disabled = true;
+  optimizedStops = null;
+  renderStops();
+  updateCalcBtn();
+  clearRoute();
+});
+
+function removeStop(idx) {
+  stops.splice(idx, 1);
+  optimizedStops = null;
+  renderStops();
+  updateCalcBtn();
+  clearRoute();
+}
+
+function renderStops() {
+  const list = document.getElementById('stopsList');
+
+  if (stops.length === 0) {
+    list.innerHTML = '<div class="no-stops-msg" id="emptyMsg">Añade al menos 2 paradas para calcular la ruta</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  stops.forEach((stop, i) => {
+    const isFirst = i === 0;
+    const isLast = i === stops.length - 1 && stops.length > 1;
+
+    let numClass = 'waypoint';
+    let label = 'PARADA';
+    if (isFirst) { numClass = 'origin'; label = 'ORIGEN'; }
+    else if (isLast) { numClass = 'dest'; label = 'DESTINO'; }
+
+    const div = document.createElement('div');
+    div.className = 'stop-item';
+    div.innerHTML = `
+      <div class="stop-number ${numClass}">${i+1}</div>
+      <div class="stop-info">
+        <div class="stop-name">${stop.name}</div>
+        <div class="stop-tag">${label}</div>
+      </div>
+      <button class="stop-del" onclick="removeStop(${i})" title="Eliminar">✕</button>
+    `;
+    list.appendChild(div);
+  });
+
+  updateMarkers();
+}
+
+function updateMarkers() {
+  markers.forEach(m => map.removeLayer(m));
+  markers = [];
+
+  const colors = ['#39d98a','#4f8ef7','#ff8c42','#a78bfa','#34d399','#f472b6','#fb923c','#60a5fa','#facc15','#f87171'];
+
+  stops.forEach((stop, i) => {
+    const isFirst = i === 0;
+    const isLast = i === stops.length - 1 && stops.length > 1;
+    let color = colors[i % colors.length];
+    if (isFirst) color = '#39d98a';
+    if (isLast) color = '#ff3c3c';
+
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="
+        width:32px; height:32px; border-radius:50% 50% 50% 0; transform:rotate(-45deg);
+        background:${color}; border:2px solid #fff;
+        display:flex; align-items:center; justify-content:center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+      ">
+        <span style="transform:rotate(45deg); font-family:'Syne',sans-serif; font-weight:800; font-size:11px; color:#000;">${i+1}</span>
+      </div>`,
+      iconSize: [32,32],
+      iconAnchor: [16,32],
+      popupAnchor: [0,-32]
+    });
+
+    const m = L.marker([stop.lat, stop.lon], { icon })
+      .addTo(map)
+      .bindPopup(`<b>${stop.name}</b><br><small>Parada ${i+1}</small>`);
+    markers.push(m);
+  });
+
+  if (stops.length > 0) {
+    const group = L.featureGroup(markers);
+    map.fitBounds(group.getBounds().pad(0.15));
+  }
+}
+
+function updateCalcBtn() {
+  document.getElementById('calcBtn').disabled = stops.length < 2;
+}
+
+// TRAVEL MODE
+function setMode(btn) {
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  travelMode = btn.dataset.mode;
+  clearRoute();
+}
+
+// OSRM TRIP (TSP)
+const OSRM_PROFILES = {
+  driving: 'driving',
+  cycling: 'cycling',
+  walking: 'foot'
+};
+
+async function calcularRuta() {
+  if (stops.length < 2) return;
+
+  document.getElementById('loadingOverlay').classList.add('show');
+  clearRoute();
+
+  try {
+    const profile = OSRM_PROFILES[travelMode];
+    const coords = stops.map(s => `${s.lon},${s.lat}`).join(';');
+    const url = `https://router.project-osrm.org/trip/v1/${profile}/${coords}` +
+                `?roundtrip=false&source=first&destination=last&steps=true` +
+                `&geometries=geojson&overview=full`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (data.code !== 'Ok' || !data.trips?.length) {
+      showToast('No se pudo calcular la ruta óptima. Verifica las direcciones.', 'error');
+      return;
+    }
+
+    const trip = data.trips[0];
+    const waypoints = data.waypoints;
+    displayTrip(trip, waypoints);
+
+  } catch(e) {
+    showToast('Error de conexión. Verifica tu internet.', 'error');
+    console.error(e);
+  } finally {
+    document.getElementById('loadingOverlay').classList.remove('show');
+  }
+}
+
+function displayTrip(trip, waypoints) {
+  routeLayer = L.geoJSON(trip.geometry, {
+    style: {
+      color: '#ff3c3c',
+      weight: 5,
+      opacity: 0.85,
+      lineCap: 'round',
+      lineJoin: 'round'
+    }
+  }).addTo(map);
+
+  L.geoJSON(trip.geometry, {
+    style: {
+      color: '#ff6060',
+      weight: 12,
+      opacity: 0.15,
+      lineCap: 'round'
+    }
+  }).addTo(map);
+
+  map.fitBounds(routeLayer.getBounds().pad(0.1));
+
+  const orderedStops = [];
+  waypoints
+    .sort((a, b) => a.waypoint_index - b.waypoint_index)
+    .forEach(wp => {
+      orderedStops.push(stops[wp.waypoint_index]);
+    });
+
+  optimizedStops = orderedStops;
+
+  const totalDist = (trip.distance / 1000).toFixed(1);
+  const totalMin = Math.round(trip.duration / 60);
+  const totalHrs = Math.floor(totalMin / 60);
+  const remMin = totalMin % 60;
+  const timeStr = totalHrs > 0 ? `${totalHrs}h ${remMin}m` : `${totalMin} min`;
+
+  const modeLabels = { driving: '🚗 Coche', cycling: '🚲 Bicicleta', walking: '🚶 A pie' };
+  const modeLabel = modeLabels[travelMode];
+
+  let html = `
+    <div class="section-title" style="margin-bottom:12px;">📊 RUTA ÓPTIMA</div>
+    <div class="result-summary">
+      <div class="stat-box">
+        <div class="stat-value">${timeStr}</div>
+        <div class="stat-label">TIEMPO EST.</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value">${totalDist} km</div>
+        <div class="stat-label">DISTANCIA</div>
+      </div>
+    </div>
+    <div style="font-size:11px; color:var(--muted); margin-bottom:12px;">${modeLabel} · ${orderedStops.length} paradas (orden optimizado)</div>
+    <div class="section-title" style="margin-bottom:10px;">🗺️ RECORRIDO</div>
+    <div class="route-steps">
+  `;
+
+  trip.legs.forEach((leg, i) => {
+    const from = orderedStops[i].name.split(',')[0];
+    const to = orderedStops[i+1].name.split(',')[0];
+    const dist = (leg.distance / 1000).toFixed(1);
+    const mins = Math.round(leg.duration / 60);
+    const hh = Math.floor(mins / 60);
+    const mm = mins % 60;
+    const legTime = hh > 0 ? `${hh}h ${mm}m` : `${mins} min`;
+
+    html += `
+      <div class="step-item segment">
+        <div class="step-icon">➡️</div>
+        <div class="step-text">
+          <strong>${from}</strong> → <strong>${to}</strong><br>
+          <span style="color:var(--muted); font-size:11px;">${dist} km</span>
+        </div>
+        <div class="step-time">${legTime}</div>
+      </div>
+    `;
+  });
+
+  const allSteps = trip.legs.flatMap(l => l.steps || []);
+  const keySteps = allSteps.filter(s => s.maneuver?.type !== 'depart' && s.distance > 200);
+  const topSteps = keySteps.slice(0, 8);
+
+  if (topSteps.length > 0) {
+    html += `</div><div class="section-title" style="margin:14px 0 10px;">🧭 INDICACIONES CLAVE</div><div class="route-steps">`;
+    topSteps.forEach(step => {
+      const dist = step.distance > 1000 ? (step.distance/1000).toFixed(1)+' km' : Math.round(step.distance)+' m';
+      const name = step.name || 'Sin nombre';
+      const maneuver = step.maneuver?.type || '';
+      const icon = getManeuverIcon(maneuver, step.maneuver?.modifier);
+      html += `
+        <div class="step-item">
+          <div class="step-icon">${icon}</div>
+          <div class="step-text">${name}</div>
+          <div class="step-time">${dist}</div>
+        </div>
+      `;
+    });
+  }
+
+  html += `
+    </div>
+    <div style="margin-top:14px; text-align:center;">
+      <button onclick="abrirEnGoogleMaps()" style="
+        padding:10px 14px;
+        border-radius:8px;
+        border:1px solid var(--blue);
+        background:rgba(79,142,247,0.12);
+        color:#000;
+        font-family:'Syne',sans-serif;
+        font-size:13px;
+        cursor:pointer;
+      ">
+        Abrir ruta en Google Maps
+      </button>
+    </div>
+  `;
+
+  const panel = document.getElementById('resultsPanel');
+  panel.innerHTML = html;
+  panel.style.display = 'block';
+
+  showToast(`Ruta óptima calculada: ${timeStr} · ${totalDist} km`, 'success');
+}
+
+function getManeuverIcon(type, modifier) {
+  if (type === 'turn') {
+    if (modifier?.includes('left')) return '↰';
+    if (modifier?.includes('right')) return '↱';
+    return '↑';
+  }
+  if (type === 'roundabout') return '🔄';
+  if (type === 'merge') return '🔀';
+  if (type === 'fork') return '⑂';
+  if (type === 'arrive') return '🏁';
+  if (type === 'continue') return '↑';
+  if (type === 'end of road') {
+    if (modifier?.includes('left')) return '↰';
+    if (modifier?.includes('right')) return '↱';
+  }
+  return '→';
+}
+
+function clearRoute() {
+  if (routeLayer) {
+    map.eachLayer(l => {
+      if (l instanceof L.GeoJSON) map.removeLayer(l);
+    });
+    routeLayer = null;
+  }
+  document.getElementById('resultsPanel').style.display = 'none';
+}
+
+function abrirEnGoogleMaps() {
+  const list = optimizedStops && optimizedStops.length === stops.length
+    ? optimizedStops
+    : stops;
+
+  if (list.length < 2) {
+    showToast('No hay suficientes paradas para exportar.', 'error');
+    return;
+  }
+
+  const origin = encodeURIComponent(list[0].name);
+  const destination = encodeURIComponent(list[list.length - 1].name);
+  const middle = list.slice(1, -1);
+
+  const waypointsParam = middle
+    .slice(0, 8)
+    .map(s => encodeURIComponent(s.name))
+    .join('%7C');
+
+  let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`;
+  if (waypointsParam) {
+    url += `&waypoints=${waypointsParam}`;
+  }
+
+  window.open(url, '_blank');
+}
+
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+loadSavedRoutes();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(console.error);
+  });
+}
+</script>
+</body>
+</html>
