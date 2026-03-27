@@ -280,8 +280,27 @@
         <button class="mode-btn" data-mode="cycling" onclick="setMode(this)">🚲 Bici</button>
         <button class="mode-btn" data-mode="walking" onclick="setMode(this)">🚶 A pie</button>
       </div>
+
       <button class="calc-btn" id="calcBtn" disabled onclick="calcularRuta()">
         ⚡ CALCULAR RUTA ÓPTIMA
+      </button>
+
+      <button
+        id="roundTripBtn"
+        onclick="toggleRoundTrip()"
+        style="
+          margin-top:6px;
+          padding:8px 10px;
+          border-radius:8px;
+          border:1px dashed var(--border);
+          background:var(--panel2);
+          color:var(--muted);
+          font-family:'DM Mono',monospace;
+          font-size:11px;
+          cursor:pointer;
+        "
+      >
+        ⟳ Volver al origen (desactivado)
       </button>
     </div>
 
@@ -344,6 +363,7 @@ let markers = [];
 let travelMode = 'driving';
 let debounceTimer = null;
 let optimizedStops = null;
+let roundTrip = false; // ida y vuelta al origen
 
 const STORAGE_KEY = 'rutaMadrid_rutas';
 let savedRoutes = [];
@@ -469,18 +489,16 @@ function selectPlace(place) {
     lon: parseFloat(place.lon),
     display: place.display_name
   };
-  searchIlice(0,2).join(',').trim(),
-    lat: parseFloat(place.lat),
-    lon: parseFloat(place.lon),
-    display: place.display_name
-  };
   searchInput.value = selectedPlace.name;
   autocompleteList.classList.remove('open');
   addBtn.disabled = false;
   map.setView([selectedPlace.lat, selectedPlace.lon], 15);
 }
 
-// ADD / REMOVE Sror'); return; }
+// ADD / REMOVE / MOVE STOPS
+addBtn.addEventListener('click', () => {
+  if (!selectedPlace) return;
+  if (stops.length >= 10) { showToast('Máximo 10 paradas', 'error'); return; }
 
   stops.push({ ...selectedPlace });
   selectedPlace = null;
@@ -494,6 +512,28 @@ function selectPlace(place) {
 
 function removeStop(idx) {
   stops.splice(idx, 1);
+  optimizedStops = null;
+  renderStops();
+  updateCalcBtn();
+  clearRoute();
+}
+
+function moveStopUp(idx) {
+  if (idx <= 0) return;
+  const tmp = stops[idx - 1];
+  stops[idx - 1] = stops[idx];
+  stops[idx] = tmp;
+  optimizedStops = null;
+  renderStops();
+  updateCalcBtn();
+  clearRoute();
+}
+
+function moveStopDown(idx) {
+  if (idx >= stops.length - 1) return;
+  const tmp = stops[idx + 1];
+  stops[idx + 1] = stops[idx];
+  stops[idx] = tmp;
   optimizedStops = null;
   renderStops();
   updateCalcBtn();
@@ -526,18 +566,32 @@ function renderStops() {
         <div class="stop-name">${stop.name}</div>
         <div class="stop-tag">${label}</div>
       </div>
-      <button class="stop-del" onclick="removeStop(${i})" title="Eliminar">✕</butlice(0,2).join(',').trim(),
-    lat: parseFloat(place.lat),
-    lon: parseFloat(place.lon),
-    display: place.display_name
-  };
-  searchInput.value = selectedPlace.name;
-  autocompleteList.classList.remove('open');
-  addBtn.disabled = false;
-  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
+      <div style="display:flex; flex-direction:column; gap:2px; margin-right:4px;">
+        <button onclick="moveStopUp(${i})" title="Subir" style="
+          background:none; border:none; color:var(--muted); cursor:pointer;
+          font-size:12px; line-height:1; padding:0;
+        ">↑</button>
+        <button onclick="moveStopDown(${i})" title="Bajar" style="
+          background:none; border:none; color:var(--muted); cursor:pointer;
+          font-size:12px; line-height:1; padding:0;
+        ">↓</button>
+      </div>
+      <button class="stop-del" onclick="removeStop(${i})" title="Eliminar">✕</button>
+    `;
+    list.appendChild(div);
+  });
+
+  updateMarkers();
 }
 
-// ADD / REMOVE Srst = i === 0;
+function updateMarkers() {
+  markers.forEach(m => map.removeLayer(m));
+  markers = [];
+
+  const colors = ['#39d98a','#4f8ef7','#ff8c42','#a78bfa','#34d399','#f472b6','#fb923c','#60a5fa','#facc15','#f87171'];
+
+  stops.forEach((stop, i) => {
+    const isFirst = i === 0;
     const isLast = i === stops.length - 1 && stops.length > 1;
     let color = colors[i % colors.length];
     if (isFirst) color = '#39d98a';
@@ -571,142 +625,157 @@ function renderStops() {
 }
 
 function updateCalcBtn() {
-  document.getElementById('calcBtn').disabled = stops.lelice(0,2).join(',').trim(),
-    lat: parseFloat(place.lat),
-    lon: parseFloat(place.lon),
-    display: place.display_name
-  };
-  searchInput.value = selectedPlace.name;
-  autocompleteList.classList.remove('open');
-  addBtn.disabled = false;
-  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
+  document.getElementById('calcBtn').disabled = stops.length < 2;
 }
 
-// ADD / REMOVE St'
+// TRAVEL MODE
+function setMode(btn) {
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  travelMode = btn.dataset.mode;
+  clearRoute();
+}
+
+function toggleRoundTrip() {
+  roundTrip = !roundTrip;
+  const btn = document.getElementById('roundTripBtn');
+  if (roundTrip) {
+    btn.textContent = '⟳ Volver al origen (activado)';
+    btn.style.borderColor = 'var(--blue)';
+    btn.style.color = 'var(--blue)';
+  } else {
+    btn.textContent = '⟳ Volver al origen (desactivado)';
+    btn.style.borderColor = 'var(--border)';
+    btn.style.color = 'var(--muted)';
+  }
+}
+
+// OSRM TRIP (TSP)
+const OSRM_PROFILES = {
+  driving: 'driving',
+  cycling: 'cycling',
+  walking: 'foot'
 };
 
-async function calclice(0,2).join(',').trim(),
-    lat: parseFloat(place.lat),
-    lon: parseFloat(place.lon),
-    display: place.display_name
-  };
-  searchInput.value = selectedPlace.name;
-  autocompleteList.classList.remove('open');
-  addBtn.disabled = false;
-  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
+async function calcularRuta() {
+  if (stops.length < 2) return;
+
+  document.getElementById('loadingOverlay').classList.add('show');
+  clearRoute();
+
+  try {
+    const profile = OSRM_PROFILES[travelMode];
+
+    // Clonamos las paradas para aplicar ida/vuelta si procede
+    let coordsStops = [...stops];
+
+    // Si "Volver al origen" está activado y hay al menos 2 paradas,
+    // forzamos que el último punto sea igual que el primero (ida y vuelta) [web:44]
+    if (roundTrip && coordsStops.length >= 2) {
+      coordsStops[coordsStops.length - 1] = coordsStops[0];
+    }
+
+    const coords = coordsStops.map(s => `${s.lon},${s.lat}`).join(';');
+
+    const url = `https://router.project-osrm.org/trip/v1/${profile}/${coords}` +
+                `?roundtrip=false&source=first&destination=last&steps=true` +
+                `&geometries=geojson&overview=full`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (data.code !== 'Ok' || !data.trips?.length) {
+      showToast('No se pudo calcular la ruta óptima. Verifica las direcciones.', 'error');
+      return;
+    }
+
+    const trip = data.trips[0];
+    const waypoints = data.waypoints;
+    displayTrip(trip, waypoints);
+
+  } catch(e) {
+    showToast('Error de conexión. Verifica tu internet.', 'error');
+    console.error(e);
+  } finally {
+    document.getElementById('loadingOverlay').classList.remove('show');
+  }
 }
 
-// ADD / REMOVE S,').trim(),
-    lat: parseFloat(place.lat),
-    lon: parseFloat(place.lon),
-    display: place.display_name
-  };
-  searchInput.value = selectedPlace.name;
-  autocompleteList.classList.remove('open');
-  addBtn.disabled = false;
-  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
-}
+function displayTrip(trip, waypoints) {
+  routeLayer = L.geoJSON(trip.geometry, {
+    style: {
+      color: '#ff3c3c',
+      weight: 5,
+      opacity: 0.85,
+      lineCap: 'round',
+      lineJoin: 'round'
+    }
+  }).addTo(map);
 
-// ADD / REMOVE S.join(',').trim(),
-    lat: parseFloat(place.lat),
-    lon: parseFloat(place.lon),
-    display: place.display_name
-  };
-  searchInput.value = selectedPlace.name;
-  autocompleteList.classList.remove('open');
-  addBtn.disabled = false;
-  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
-}
+  L.geoJSON(trip.geometry, {
+    style: {
+      color: '#ff6060',
+      weight: 12,
+      opacity: 0.15,
+      lineCap: 'round'
+    }
+  }).addTo(map);
 
-// ADD / REMOVE SeFloat(place.lat),
-    lon: parseFloat(place.lon),
-    display: place.display_name
-  };
-  searchInput.value = selectedPlace.name;
-  autocompleteList.classList.remove('open');
-  addBtn.disabled = false;
-  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
-}
+  map.fitBounds(routeLayer.getBounds().pad(0.1));
 
-// ADD / REMOVE Svalue = selectedPlace.name;
-  autocompleteList.classList.remove('open');
-  addBtn.disabled = false;
-  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
-}
+  // Orden óptimo devuelto por OSRM (manteniendo origen y destino fijos) [web:44][web:170]
+  const orderedStops = [];
+  waypoints
+    .sort((a, b) => a.waypoint_index - b.waypoint_index)
+    .forEach(wp => {
+      orderedStops.push(stops[wp.waypoint_index]);
+    });
 
-// ADD / REMOVE SutocompleteList.classList.remove('open');
-  addBtn.disabled = false;
-  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
-}
+  stops = orderedStops;
+  optimizedStops = orderedStops;
+  renderStops();
 
-// ADD / REMOVE S),
-    display: place.display_name
-  };
-  searchInput.value = selectedPlace.name;
-  autocompleteList.classList.remove('open');
-  addBtn.disabled = false;
-  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
-}
+  const totalDist = (trip.distance / 1000).toFixed(1);
+  const totalMin = Math.round(trip.duration / 60);
+  const totalHrs = Math.floor(totalMin / 60);
+  const remMin = totalMin % 60;
+  const timeStr = totalHrs > 0 ? `${totalHrs}h ${remMin}m` : `${totalMin} min`;
 
-// ADD / REMOVE Sist.classList.remove('open');
-  addBtn.disabled = false;
-  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
-}
+  const modeLabels = { driving: '🚗 Coche', cycling: '🚲 Bicicleta', walking: '🚶 A pie' };
+  const modeLabel = modeLabels[travelMode];
 
-// ADD / REMOVE SteList.classList.remove('open');
-  addBtn.disabled = false;
-  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
-}
+  let html = `
+    <div class="section-title" style="margin-bottom:12px;">📊 RUTA ÓPTIMA</div>
+    <div class="result-summary">
+      <div class="stat-box">
+        <div class="stat-value">${timeStr}</div>
+        <div class="stat-label">TIEMPO EST.</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value">${totalDist} km</div>
+        <div class="stat-label">DISTANCIA</div>
+      </div>
+    </div>
+    <div style="font-size:11px; color:var(--muted); margin-bottom:12px;">${modeLabel} · ${stops.length} paradas (orden optimizado)</div>
+    <div class="section-title" style="margin-bottom:10px;">🗺️ RECORRIDO</div>
+    <div class="route-steps">
+  `;
 
-// ADD / REMOVE SList.classList.remove('open');
-  addBtn.disabled = false;
-  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
-}
+  trip.legs.forEach((leg, i) => {
+    const from = stops[i].name.split(',')[0];
+    const to   = stops[i+1].name.split(',')[0];
+    const dist = (leg.distance / 1000).toFixed(1);
+    const mins = Math.round(leg.duration / 60);
+    const hh   = Math.floor(mins / 60);
+    const mm   = mins % 60;
+    const legTime = hh > 0 ? `${hh}h ${mm}m` : `${mins} min`;
 
-// ADD / REMOVE S  let html = `
-    <div class="section-title" slice(0,2).join(',').trim(),
-    lat: parseFloat(place.lat),
-    lon: parseFloat(place.lon),
-    display: place.display_name
-  };
-  searchInput.value = selectedPlace.name;
-  autocompleteList.classList.remove('open');
-  addBtn.disabled = false;
-  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
-}
-
-// ADD / REMOVE Ss="stat-label">DISTANCIA</div>
-      <lice(0,2).join(',').trim(),
-    lat: parseFloat(place.lat),
-    lon: parseFloat(place.lon),
-    display: place.display_name
-  };
-  searchInput.value = selectedPlace.name;
-  autocompleteList.classList.remove('open');
-  addBtn.disabled = false;
-  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
-}
-
-// ADD / REMOVE Sops[i].name.split(',')lice(0,2).join(',').trim(),
-    lat: parseFloat(place.lat),
-    lon: parseFloat(place.lon),
-    display: place.display_name
-  };
-  searchInput.value = selectedPlace.name;
-  autocompleteList.classList.remove('open');
-  addBtn.disabled = false;
-  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
-}
-
-// ADD / REMOVE Sace.display_name
-  };
-  searchInput.value = selectedPlace.name;
-  autocompleteList.classList.remove('open');
-  addBtn.disabled = false;
-  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
-}
-
-// ADD / REMOVE S} km</span>
+    html += `
+      <div class="step-item segment">
+        <div class="step-icon">➡️</div>
+        <div class="step-text">
+          <strong>${from}</strong> → <strong>${to}</strong><br>
+          <span style="color:var(--muted); font-size:11px;">${dist} km</span>
         </div>
         <div class="step-time">${legTime}</div>
       </div>
@@ -714,79 +783,77 @@ async function calclice(0,2).join(',').trim(),
   });
 
   const allSteps = trip.legs.flatMap(l => l.steps || []);
-  const keySteps = allSteps.filter(s => s.maneuver?.type !== 'delice(0,2).join(',').trim(),
-    lat: parseFloat(place.lat),
-    lon: parseFloat(place.lon),
-    display: place.display_name
-  };
-  searchInput.value = selectedPlace.name;
-  autocompleteList.classList.remove('open');
-  addBtn.disabled = false;
-  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
-}
+  const keySteps = allSteps.filter(s => s.maneuver?.type !== 'depart' && s.distance > 200);
+  const topSteps = keySteps.slice(0, 8);
 
-// ADD / REMOVE StoFixed(1)+' km' : Math.round(step.distance)+' m';
+  if (topSteps.length > 0) {
+    html += `</div><div class="section-title" style="margin:14px 0 10px;">🧭 INDICACIONES CLAVE</div><div class="route-steps">`;
+    topSteps.forEach(step => {
+      const dist = step.distance > 1000 ? (step.distance/1000).toFixed(1)+' km' : Math.round(step.distance)+' m';
       const name = step.name || 'Sin nombre';
-      const maneuver = step.maneuver?.type ||lice(0,2).join(',').trim(),
-    lat: parseFloat(place.lat),
-    lon: parseFloat(place.lon),
-    display: place.display_name
-  };
-  searchInput.value = selectedPlace.name;
-  autocompleteList.classList.remove('open');
-  addBtn.disabled = false;
-  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
+      const maneuver = step.maneuver?.type || '';
+      const icon = getManeuverIcon(maneuver, step.maneuver?.modifier);
+      html += `
+        <div class="step-item">
+          <div class="step-icon">${icon}</div>
+          <div class="step-text">${name}</div>
+          <div class="step-time">${dist}</div>
+        </div>
+      `;
+    });
+  }
+
+  html += `
+    </div>
+    <div style="margin-top:14px; text-align:center;">
+      <button onclick="abrirEnGoogleMaps()" style="
+        padding:10px 14px;
+        border-radius:8px;
+        border:1px solid var(--blue);
+        background:rgba(79,142,247,0.12);
+        color:#000;
+        font-family:'Syne',sans-serif;
+        font-size:13px;
+        cursor:pointer;
+      ">
+        Abrir ruta en Google Maps
+      </button>
+    </div>
+  `;
+
+  const panel = document.getElementById('resultsPanel');
+  panel.innerHTML = html;
+  panel.style.display = 'block';
+
+  showToast(`Ruta óptima calculada: ${timeStr} · ${totalDist} km`, 'success');
 }
 
-// ADD / REMOVE SpleteList.classList.remove('open');
-  addBtn.disabled = false;
-  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
+function getManeuverIcon(type, modifier) {
+  if (type === 'turn') {
+    if (modifier?.includes('left')) return '↰';
+    if (modifier?.includes('right')) return '↱';
+    return '↑';
+  }
+  if (type === 'roundabout') return '🔄';
+  if (type === 'merge') return '🔀';
+  if (type === 'fork') return '⑂';
+  if (type === 'arrive') return '🏁';
+  if (type === 'continue') return '↑';
+  if (type === 'end of road') {
+    if (modifier?.includes('left')) return '↰';
+    if (modifier?.includes('right')) return '↱';
+  }
+  return '→';
 }
 
-// ADD / REMOVE Sy_name
-  };
-  searchInput.value = selectedPlace.name;
-  autocompleteList.classList.remove('open');
-  addBtn.disabled = false;
-  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
-}
-
-// ADD / REMOVE Sace.lat, selectedPlace.lon], 15);
-}
-
-// ADD / REMOVE Slon),
-    display: place.display_name
-  };
-  searchInput.value = selectedPlace.name;
-  autocompleteList.classList.remove('open');
-  addBtn.disabled = false;
-  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
-}
-
-// ADD / REMOVE SManeuverIcon(type, modifier) {
-  if (type === 'turnlice(0,2).join(',').trim(),
-    lat: parseFloat(place.lat),
-    lon: parseFloat(place.lon),
-    display: place.display_name
-  };
-  searchInput.value = selectedPlace.name;
-  autocompleteList.classList.remove('open');
-  addBtn.disabled = false;
-  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
-}
-
-// ADD / REMOVE Se(0,2).join(',').trim(),
-    lat: parseFloat(place.lat),
-    lon: parseFloat(place.lon),
-    display: place.display_name
-  };
-  searchInput.value = selectedPlace.name;
-  autocompleteList.classList.remove('open');
-  addBtn.disabled = false;
-  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
-}
-
-// ADD / REMOVE StById('resultsPanel').style.display = 'none';
+function clearRoute() {
+  if (routeLayer) {
+    map.eachLayer(l => {
+      if (l instanceof L.GeoJSON) map.removeLayer(l);
+    });
+    routeLayer = null;
+  }
+  document.getElementById('resultsPanel').style.display = 'none';
 }
 
 function abrirEnGoogleMaps() {
@@ -795,18 +862,20 @@ function abrirEnGoogleMaps() {
     : stops;
 
   if (list.length < 2) {
-    showToast('No hay suficientes paradas para exportar.lice(0,2).join(',').trim(),
-    lat: parseFloat(place.lat),
-    lon: parseFloat(place.lon),
-    display: place.display_name
-  };
-  searchInput.value = selectedPlace.name;
-  autocompleteList.classList.remove('open');
-  addBtn.disabled = false;
-  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
-}
+    showToast('No hay suficientes paradas para exportar.', 'error');
+    return;
+  }
 
-// ADD / REMOVE Sttps://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`;
+  const origin      = encodeURIComponent(list[0].name);
+  const destination = encodeURIComponent(list[list.length - 1].name);
+  const middle      = list.slice(1, -1);
+
+  const waypointsParam = middle
+    .slice(0, 8)
+    .map(s => encodeURIComponent(s.name))
+    .join('%7C');
+
+  let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`;
   if (waypointsParam) {
     url += `&waypoints=${waypointsParam}`;
   }
@@ -815,18 +884,18 @@ function abrirEnGoogleMaps() {
 }
 
 function showToast(msg, type='') {
-  const t = document.getElementById('toaslice(0,2).join(',').trim(),
-    lat: parseFloat(place.lat),
-    lon: parseFloat(place.lon),
-    display: place.display_name
-  };
-  searchInput.value = selectedPlace.name;
-  autocompleteList.classList.remove('open');
-  addBtn.disabled = false;
-  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  setTimeout(() => t.classList.remove('show'), 3500);
 }
 
-// ADD / REMOVE S })
+loadSavedRoutes();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/rutasmadrid/sw.js', { scope: '/rutasmadrid/' })
       .catch(console.error);
   });
 }
