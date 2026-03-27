@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RutaMadrid — Optimizador de Recorridos</title>
-  <link rel="manifest" href="/rutasmadrid/manifest.webmanifest">
+<link rel="manifest" href="/rutasmadrid/manifest.webmanifest">
 <meta name="theme-color" content="#ffffff">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
@@ -325,7 +325,7 @@ const map = L.map('map', {
   zoomControl: true
 });
 
-// Mapa claro OSM [web:89]
+// OSM claro
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '© OpenStreetMap contributors',
   maxZoom: 19
@@ -469,16 +469,18 @@ function selectPlace(place) {
     lon: parseFloat(place.lon),
     display: place.display_name
   };
+  searchIlice(0,2).join(',').trim(),
+    lat: parseFloat(place.lat),
+    lon: parseFloat(place.lon),
+    display: place.display_name
+  };
   searchInput.value = selectedPlace.name;
   autocompleteList.classList.remove('open');
   addBtn.disabled = false;
   map.setView([selectedPlace.lat, selectedPlace.lon], 15);
 }
 
-// ADD / REMOVE STOPS
-addBtn.addEventListener('click', () => {
-  if (!selectedPlace) return;
-  if (stops.length >= 10) { showToast('Máximo 10 paradas', 'error'); return; }
+// ADD / REMOVE Sror'); return; }
 
   stops.push({ ...selectedPlace });
   selectedPlace = null;
@@ -524,22 +526,18 @@ function renderStops() {
         <div class="stop-name">${stop.name}</div>
         <div class="stop-tag">${label}</div>
       </div>
-      <button class="stop-del" onclick="removeStop(${i})" title="Eliminar">✕</button>
-    `;
-    list.appendChild(div);
-  });
-
-  updateMarkers();
+      <button class="stop-del" onclick="removeStop(${i})" title="Eliminar">✕</butlice(0,2).join(',').trim(),
+    lat: parseFloat(place.lat),
+    lon: parseFloat(place.lon),
+    display: place.display_name
+  };
+  searchInput.value = selectedPlace.name;
+  autocompleteList.classList.remove('open');
+  addBtn.disabled = false;
+  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
 }
 
-function updateMarkers() {
-  markers.forEach(m => map.removeLayer(m));
-  markers = [];
-
-  const colors = ['#39d98a','#4f8ef7','#ff8c42','#a78bfa','#34d399','#f472b6','#fb923c','#60a5fa','#facc15','#f87171'];
-
-  stops.forEach((stop, i) => {
-    const isFirst = i === 0;
+// ADD / REMOVE Srst = i === 0;
     const isLast = i === stops.length - 1 && stops.length > 1;
     let color = colors[i % colors.length];
     if (isFirst) color = '#39d98a';
@@ -573,129 +571,142 @@ function updateMarkers() {
 }
 
 function updateCalcBtn() {
-  document.getElementById('calcBtn').disabled = stops.length < 2;
+  document.getElementById('calcBtn').disabled = stops.lelice(0,2).join(',').trim(),
+    lat: parseFloat(place.lat),
+    lon: parseFloat(place.lon),
+    display: place.display_name
+  };
+  searchInput.value = selectedPlace.name;
+  autocompleteList.classList.remove('open');
+  addBtn.disabled = false;
+  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
 }
 
-// TRAVEL MODE
-function setMode(btn) {
-  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  travelMode = btn.dataset.mode;
-  clearRoute();
-}
-
-// OSRM TRIP (TSP)
-const OSRM_PROFILES = {
-  driving: 'driving',
-  cycling: 'cycling',
-  walking: 'foot'
+// ADD / REMOVE St'
 };
 
-async function calcularRuta() {
-  if (stops.length < 2) return;
-
-  document.getElementById('loadingOverlay').classList.add('show');
-  clearRoute();
-
-  try {
-    const profile = OSRM_PROFILES[travelMode];
-    const coords = stops.map(s => `${s.lon},${s.lat}`).join(';');
-    const url = `https://router.project-osrm.org/trip/v1/${profile}/${coords}` +
-                `?roundtrip=false&source=first&destination=last&steps=true` +
-                `&geometries=geojson&overview=full`;
-
-    const res = await fetch(url);
-    const data = await res.json();
-
-    if (data.code !== 'Ok' || !data.trips?.length) {
-      showToast('No se pudo calcular la ruta óptima. Verifica las direcciones.', 'error');
-      return;
-    }
-
-    const trip = data.trips[0];
-    const waypoints = data.waypoints;
-    displayTrip(trip, waypoints);
-
-  } catch(e) {
-    showToast('Error de conexión. Verifica tu internet.', 'error');
-    console.error(e);
-  } finally {
-    document.getElementById('loadingOverlay').classList.remove('show');
-  }
+async function calclice(0,2).join(',').trim(),
+    lat: parseFloat(place.lat),
+    lon: parseFloat(place.lon),
+    display: place.display_name
+  };
+  searchInput.value = selectedPlace.name;
+  autocompleteList.classList.remove('open');
+  addBtn.disabled = false;
+  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
 }
 
-function displayTrip(trip, waypoints) {
-  routeLayer = L.geoJSON(trip.geometry, {
-    style: {
-      color: '#ff3c3c',
-      weight: 5,
-      opacity: 0.85,
-      lineCap: 'round',
-      lineJoin: 'round'
-    }
-  }).addTo(map);
+// ADD / REMOVE S,').trim(),
+    lat: parseFloat(place.lat),
+    lon: parseFloat(place.lon),
+    display: place.display_name
+  };
+  searchInput.value = selectedPlace.name;
+  autocompleteList.classList.remove('open');
+  addBtn.disabled = false;
+  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
+}
 
-  L.geoJSON(trip.geometry, {
-    style: {
-      color: '#ff6060',
-      weight: 12,
-      opacity: 0.15,
-      lineCap: 'round'
-    }
-  }).addTo(map);
+// ADD / REMOVE S.join(',').trim(),
+    lat: parseFloat(place.lat),
+    lon: parseFloat(place.lon),
+    display: place.display_name
+  };
+  searchInput.value = selectedPlace.name;
+  autocompleteList.classList.remove('open');
+  addBtn.disabled = false;
+  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
+}
 
-  map.fitBounds(routeLayer.getBounds().pad(0.1));
+// ADD / REMOVE SeFloat(place.lat),
+    lon: parseFloat(place.lon),
+    display: place.display_name
+  };
+  searchInput.value = selectedPlace.name;
+  autocompleteList.classList.remove('open');
+  addBtn.disabled = false;
+  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
+}
 
-  const orderedStops = [];
-  waypoints
-    .sort((a, b) => a.waypoint_index - b.waypoint_index)
-    .forEach(wp => {
-      orderedStops.push(stops[wp.waypoint_index]);
-    });
+// ADD / REMOVE Svalue = selectedPlace.name;
+  autocompleteList.classList.remove('open');
+  addBtn.disabled = false;
+  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
+}
 
-  optimizedStops = orderedStops;
+// ADD / REMOVE SutocompleteList.classList.remove('open');
+  addBtn.disabled = false;
+  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
+}
 
-  const totalDist = (trip.distance / 1000).toFixed(1);
-  const totalMin = Math.round(trip.duration / 60);
-  const totalHrs = Math.floor(totalMin / 60);
-  const remMin = totalMin % 60;
-  const timeStr = totalHrs > 0 ? `${totalHrs}h ${remMin}m` : `${totalMin} min`;
+// ADD / REMOVE S),
+    display: place.display_name
+  };
+  searchInput.value = selectedPlace.name;
+  autocompleteList.classList.remove('open');
+  addBtn.disabled = false;
+  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
+}
 
-  const modeLabels = { driving: '🚗 Coche', cycling: '🚲 Bicicleta', walking: '🚶 A pie' };
-  const modeLabel = modeLabels[travelMode];
+// ADD / REMOVE Sist.classList.remove('open');
+  addBtn.disabled = false;
+  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
+}
 
-  let html = `
-    <div class="section-title" style="margin-bottom:12px;">📊 RUTA ÓPTIMA</div>
-    <div class="result-summary">
-      <div class="stat-box">
-        <div class="stat-value">${timeStr}</div>
-        <div class="stat-label">TIEMPO EST.</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-value">${totalDist} km</div>
-        <div class="stat-label">DISTANCIA</div>
-      </div>
-    </div>
-    <div style="font-size:11px; color:var(--muted); margin-bottom:12px;">${modeLabel} · ${orderedStops.length} paradas (orden optimizado)</div>
-    <div class="section-title" style="margin-bottom:10px;">🗺️ RECORRIDO</div>
-    <div class="route-steps">
-  `;
+// ADD / REMOVE SteList.classList.remove('open');
+  addBtn.disabled = false;
+  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
+}
 
-  trip.legs.forEach((leg, i) => {
-    const from = orderedStops[i].name.split(',')[0];
-    const to = orderedStops[i+1].name.split(',')[0];
-    const dist = (leg.distance / 1000).toFixed(1);
-    const mins = Math.round(leg.duration / 60);
-    const hh = Math.floor(mins / 60);
-    const mm = mins % 60;
-    const legTime = hh > 0 ? `${hh}h ${mm}m` : `${mins} min`;
+// ADD / REMOVE SList.classList.remove('open');
+  addBtn.disabled = false;
+  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
+}
 
-    html += `
-      <div class="step-item segment">
-        <div class="step-icon">➡️</div>
-        <div class="step-text">
-          <strong>${from}</strong> → <strong>${to}</strong><br>
-          <span style="color:var(--muted); font-size:11px;">${dist} km</span>
+// ADD / REMOVE S  let html = `
+    <div class="section-title" slice(0,2).join(',').trim(),
+    lat: parseFloat(place.lat),
+    lon: parseFloat(place.lon),
+    display: place.display_name
+  };
+  searchInput.value = selectedPlace.name;
+  autocompleteList.classList.remove('open');
+  addBtn.disabled = false;
+  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
+}
+
+// ADD / REMOVE Ss="stat-label">DISTANCIA</div>
+      <lice(0,2).join(',').trim(),
+    lat: parseFloat(place.lat),
+    lon: parseFloat(place.lon),
+    display: place.display_name
+  };
+  searchInput.value = selectedPlace.name;
+  autocompleteList.classList.remove('open');
+  addBtn.disabled = false;
+  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
+}
+
+// ADD / REMOVE Sops[i].name.split(',')lice(0,2).join(',').trim(),
+    lat: parseFloat(place.lat),
+    lon: parseFloat(place.lon),
+    display: place.display_name
+  };
+  searchInput.value = selectedPlace.name;
+  autocompleteList.classList.remove('open');
+  addBtn.disabled = false;
+  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
+}
+
+// ADD / REMOVE Sace.display_name
+  };
+  searchInput.value = selectedPlace.name;
+  autocompleteList.classList.remove('open');
+  addBtn.disabled = false;
+  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
+}
+
+// ADD / REMOVE S} km</span>
         </div>
         <div class="step-time">${legTime}</div>
       </div>
@@ -703,77 +714,79 @@ function displayTrip(trip, waypoints) {
   });
 
   const allSteps = trip.legs.flatMap(l => l.steps || []);
-  const keySteps = allSteps.filter(s => s.maneuver?.type !== 'depart' && s.distance > 200);
-  const topSteps = keySteps.slice(0, 8);
+  const keySteps = allSteps.filter(s => s.maneuver?.type !== 'delice(0,2).join(',').trim(),
+    lat: parseFloat(place.lat),
+    lon: parseFloat(place.lon),
+    display: place.display_name
+  };
+  searchInput.value = selectedPlace.name;
+  autocompleteList.classList.remove('open');
+  addBtn.disabled = false;
+  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
+}
 
-  if (topSteps.length > 0) {
-    html += `</div><div class="section-title" style="margin:14px 0 10px;">🧭 INDICACIONES CLAVE</div><div class="route-steps">`;
-    topSteps.forEach(step => {
-      const dist = step.distance > 1000 ? (step.distance/1000).toFixed(1)+' km' : Math.round(step.distance)+' m';
+// ADD / REMOVE StoFixed(1)+' km' : Math.round(step.distance)+' m';
       const name = step.name || 'Sin nombre';
-      const maneuver = step.maneuver?.type || '';
-      const icon = getManeuverIcon(maneuver, step.maneuver?.modifier);
-      html += `
-        <div class="step-item">
-          <div class="step-icon">${icon}</div>
-          <div class="step-text">${name}</div>
-          <div class="step-time">${dist}</div>
-        </div>
-      `;
-    });
-  }
-
-  html += `
-    </div>
-    <div style="margin-top:14px; text-align:center;">
-      <button onclick="abrirEnGoogleMaps()" style="
-        padding:10px 14px;
-        border-radius:8px;
-        border:1px solid var(--blue);
-        background:rgba(79,142,247,0.12);
-        color:#000;
-        font-family:'Syne',sans-serif;
-        font-size:13px;
-        cursor:pointer;
-      ">
-        Abrir ruta en Google Maps
-      </button>
-    </div>
-  `;
-
-  const panel = document.getElementById('resultsPanel');
-  panel.innerHTML = html;
-  panel.style.display = 'block';
-
-  showToast(`Ruta óptima calculada: ${timeStr} · ${totalDist} km`, 'success');
+      const maneuver = step.maneuver?.type ||lice(0,2).join(',').trim(),
+    lat: parseFloat(place.lat),
+    lon: parseFloat(place.lon),
+    display: place.display_name
+  };
+  searchInput.value = selectedPlace.name;
+  autocompleteList.classList.remove('open');
+  addBtn.disabled = false;
+  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
 }
 
-function getManeuverIcon(type, modifier) {
-  if (type === 'turn') {
-    if (modifier?.includes('left')) return '↰';
-    if (modifier?.includes('right')) return '↱';
-    return '↑';
-  }
-  if (type === 'roundabout') return '🔄';
-  if (type === 'merge') return '🔀';
-  if (type === 'fork') return '⑂';
-  if (type === 'arrive') return '🏁';
-  if (type === 'continue') return '↑';
-  if (type === 'end of road') {
-    if (modifier?.includes('left')) return '↰';
-    if (modifier?.includes('right')) return '↱';
-  }
-  return '→';
+// ADD / REMOVE SpleteList.classList.remove('open');
+  addBtn.disabled = false;
+  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
 }
 
-function clearRoute() {
-  if (routeLayer) {
-    map.eachLayer(l => {
-      if (l instanceof L.GeoJSON) map.removeLayer(l);
-    });
-    routeLayer = null;
-  }
-  document.getElementById('resultsPanel').style.display = 'none';
+// ADD / REMOVE Sy_name
+  };
+  searchInput.value = selectedPlace.name;
+  autocompleteList.classList.remove('open');
+  addBtn.disabled = false;
+  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
+}
+
+// ADD / REMOVE Sace.lat, selectedPlace.lon], 15);
+}
+
+// ADD / REMOVE Slon),
+    display: place.display_name
+  };
+  searchInput.value = selectedPlace.name;
+  autocompleteList.classList.remove('open');
+  addBtn.disabled = false;
+  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
+}
+
+// ADD / REMOVE SManeuverIcon(type, modifier) {
+  if (type === 'turnlice(0,2).join(',').trim(),
+    lat: parseFloat(place.lat),
+    lon: parseFloat(place.lon),
+    display: place.display_name
+  };
+  searchInput.value = selectedPlace.name;
+  autocompleteList.classList.remove('open');
+  addBtn.disabled = false;
+  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
+}
+
+// ADD / REMOVE Se(0,2).join(',').trim(),
+    lat: parseFloat(place.lat),
+    lon: parseFloat(place.lon),
+    display: place.display_name
+  };
+  searchInput.value = selectedPlace.name;
+  autocompleteList.classList.remove('open');
+  addBtn.disabled = false;
+  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
+}
+
+// ADD / REMOVE StById('resultsPanel').style.display = 'none';
 }
 
 function abrirEnGoogleMaps() {
@@ -782,20 +795,18 @@ function abrirEnGoogleMaps() {
     : stops;
 
   if (list.length < 2) {
-    showToast('No hay suficientes paradas para exportar.', 'error');
-    return;
-  }
+    showToast('No hay suficientes paradas para exportar.lice(0,2).join(',').trim(),
+    lat: parseFloat(place.lat),
+    lon: parseFloat(place.lon),
+    display: place.display_name
+  };
+  searchInput.value = selectedPlace.name;
+  autocompleteList.classList.remove('open');
+  addBtn.disabled = false;
+  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
+}
 
-  const origin = encodeURIComponent(list[0].name);
-  const destination = encodeURIComponent(list[list.length - 1].name);
-  const middle = list.slice(1, -1);
-
-  const waypointsParam = middle
-    .slice(0, 8)
-    .map(s => encodeURIComponent(s.name))
-    .join('%7C');
-
-  let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`;
+// ADD / REMOVE Sttps://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`;
   if (waypointsParam) {
     url += `&waypoints=${waypointsParam}`;
   }
@@ -804,18 +815,18 @@ function abrirEnGoogleMaps() {
 }
 
 function showToast(msg, type='') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = `toast show ${type}`;
-  setTimeout(() => t.classList.remove('show'), 3500);
+  const t = document.getElementById('toaslice(0,2).join(',').trim(),
+    lat: parseFloat(place.lat),
+    lon: parseFloat(place.lon),
+    display: place.display_name
+  };
+  searchInput.value = selectedPlace.name;
+  autocompleteList.classList.remove('open');
+  addBtn.disabled = false;
+  map.setView([selectedPlace.lat, selectedPlace.lon], 15);
 }
 
-loadSavedRoutes();
-</script>
-  <script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/rutasmadrid/sw.js', { scope: '/rutasmadrid/' })
+// ADD / REMOVE S })
       .catch(console.error);
   });
 }
