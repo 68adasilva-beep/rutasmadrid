@@ -251,6 +251,28 @@
 <div class="main">
   <div class="sidebar">
     <div class="sidebar-scroll">
+      <!-- Favoritos -->
+      <div class="section-title" style="margin-bottom:6px;">⭐ Favoritos</div>
+      <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;">
+        <button
+          type="button"
+          onclick="addFavoriteStop('donacion')"
+          style="
+            padding:6px 8px;
+            border-radius:8px;
+            border:1px solid var(--border);
+            background:var(--panel2);
+            color:var(--muted);
+            font-family:'DM Mono',monospace;
+            font-size:11px;
+            cursor:pointer;
+            white-space:nowrap;
+          "
+        >
+          🩸 Centro donación (Juan Montalvo, 3)
+        </button>
+      </div>
+
       <div class="section-title">📍 Añadir parada</div>
       <div class="search-wrap">
         <span class="search-icon">🔍</span>
@@ -281,27 +303,28 @@
         <button class="mode-btn" data-mode="walking" onclick="setMode(this)">🚶 A pie</button>
       </div>
 
-<button class="calc-btn" id="calcBtn" disabled onclick="calcularRuta()">
-  ⚡ CALCULAR RUTA ÓPTIMA
-</button>
+      <button class="calc-btn" id="calcBtn" disabled onclick="calcularRuta()">
+        ⚡ CALCULAR RUTA ÓPTIMA
+      </button>
 
-<button
-  id="roundTripBtn"
-  onclick="toggleRoundTrip()"
-  style="
-    margin-top:6px;
-    padding:8px 10px;
-    border-radius:8px;
-    border:1px dashed var(--border);
-    background:var(--panel2);
-    color:var(--muted);
-    font-family:'DM Mono',monospace;
-    font-size:11px;
-    cursor:pointer;
-  "
->
-  ⟳ Volver al origen (desactivado)
-</button>
+      <button
+        id="roundTripBtn"
+        onclick="toggleRoundTrip()"
+        style="
+          margin-top:6px;
+          padding:8px 10px;
+          border-radius:8px;
+          border:1px dashed var(--border);
+          background:var(--panel2);
+          color:var(--muted);
+          font-family:'DM Mono',monospace;
+          font-size:11px;
+          cursor:pointer;
+        "
+      >
+        ⟳ Volver al origen (desactivado)
+      </button>
+    </div>
 
     <div class="results-panel" id="resultsPanel" style="display:none;"></div>
   </div>
@@ -421,6 +444,29 @@ function cargarRuta() {
   updateCalcBtn();
   clearRoute();
   showToast(`Ruta "${route.name}" cargada.`, 'success');
+}
+
+// FAVORITO
+function addFavoriteStop(key) {
+  if (key === 'donacion') {
+    const favStop = {
+      name: 'Centro de donación de sangre, C/ Juan Montalvo 3',
+      lat: 40.4469,
+      lon: -3.7146,
+      display: 'Centro de donación de sangre, Calle Juan Montalvo 3, 28040 Madrid'
+    };
+
+    if (stops.length >= 10) {
+      showToast('Máximo 10 paradas', 'error');
+      return;
+    }
+    stops.push(favStop);
+    optimizedStops = null;
+    renderStops();
+    updateCalcBtn();
+    clearRoute();
+    map.setView([favStop.lat, favStop.lon], 15);
+  }
 }
 
 // SEARCH + AUTOCOMPLETE
@@ -669,7 +715,7 @@ async function calcularRuta() {
     let coordsStops = [...stops];
 
     // Si "Volver al origen" está activado y hay al menos 2 paradas,
-    // forzamos que el último punto sea igual que el primero (ida y vuelta) [web:44]
+    // forzamos que el último punto sea igual que el primero
     if (roundTrip && coordsStops.length >= 2) {
       coordsStops[coordsStops.length - 1] = coordsStops[0];
     }
