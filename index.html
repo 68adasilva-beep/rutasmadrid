@@ -814,16 +814,20 @@ function displayTrip(trip, waypoints) {
 
   map.fitBounds(routeLayer.getBounds().pad(0.1));
 
-  const orderedStops = [];
-  waypoints
-    .sort((a, b) => a.waypoint_index - b.waypoint_index)
-    .forEach(wp => {
-      orderedStops.push(stops[wp.waypoint_index]);
-    });
+// Orden óptimo según OSRM usando waypoint_index [web:44]
+const orderedStops = [];
+waypoints.forEach(wp => {
+  orderedStops[wp.waypoint_index] = stops[wp.trips_index ?? wp.waypoint_index];
+});
 
-  stops = orderedStops;
-  optimizedStops = orderedStops;
+// Filtramos posibles huecos por seguridad
+const finalOrdered = orderedStops.filter(Boolean);
+
+if (finalOrdered.length === stops.length) {
+  stops = finalOrdered;
+  optimizedStops = finalOrdered;
   renderStops();
+}
 
   const totalDist = (trip.distance / 1000).toFixed(1);
   const totalMin = Math.round(trip.duration / 60);
