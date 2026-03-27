@@ -819,25 +819,26 @@ function displayTrip(trip, waypoints, coordsCount) {
 
   map.fitBounds(routeLayer.getBounds().pad(0.1));
 
-  // Reconstruir orden de paradas según waypoint_index [web:44][web:67]
+  // Reconstruir orden de paradas según waypoint_index [web:69]
   const hasRoundTrip = roundTrip;
-  const ordered = new Array(waypoints.length);
+  const ordered = [];
 
   waypoints.forEach((wp, idx) => {
-    const tripIdx = wp.waypoint_index; // posición final en la ruta
-    const originalIdx = idx;           // posición en coordsStops
+    const idxInTrip = wp.waypoint_index;          // posición final en la ruta
+    const idxInInput = wp.trips_index ?? idx;     // índice en coordsStops (fallback al índice)
 
-    // Si es vuelta al origen, el último coordsStops es el origen duplicado:
-    // no creamos parada nueva en la lista visual.
-    if (hasRoundTrip && originalIdx === coordsCount - 1) {
+    // Si hay vuelta al origen y este waypoint corresponde al último punto
+    // (origen duplicado), no añadimos nueva parada visual.
+    if (hasRoundTrip && idxInInput === coordsCount - 1) {
       return;
     }
 
-    ordered[tripIdx] = stops[originalIdx] || stops[0];
+    ordered[idxInTrip] = stops[Math.min(idxInInput, stops.length - 1)];
   });
 
   const finalOrdered = ordered.filter(Boolean);
 
+  // Solo actualizamos si el número cuadra
   if (finalOrdered.length === stops.length) {
     stops = finalOrdered;
     optimizedStops = finalOrdered;
