@@ -805,37 +805,39 @@ function displayTrip(trip, waypoints, coordsCount, coordsStops) {
 
   map.fitBounds(routeLayer.getBounds().pad(0.1));
 
-  // Reconstruir orden de paradas según waypoint_index + location_index [web:224][web:228]
+  // Reconstruir orden de paradas según waypoint_index [web:224][web:228]
   const hasRoundTrip = roundTrip;
 
-  const coordToTripIndex = new Array(coordsStops.length).fill(null);
-
+  const coordToTripIndex = new Array(coordsCount).fill(null);
   waypoints.forEach((wp, idx) => {
-    const locIdx = wp.waypoint_index;
-    const origIdx = wp.location_index ?? idx;
-    if (origIdx != null && locIdx != null) {
-      coordToTripIndex[origIdx] = locIdx;
+    const tripIdx = wp.waypoint_index;
+    const coordIdx = wp.waypoint_index; // router.project-osrm.org usa mismo índice en este contexto
+    if (tripIdx != null && coordIdx != null) {
+      coordToTripIndex[coordIdx] = tripIdx;
     }
   });
 
-  const newStopsOrder = new Array(stops.length);
+  const tripIndexToStopIndex = new Array(stops.length).fill(null);
 
-  coordToTripIndex.forEach((tripIndex, coordIdx) => {
-    if (tripIndex == null) return;
+  coordToTripIndex.forEach((tripIdx, coordIdx) => {
+    if (tripIdx == null) return;
     if (hasRoundTrip && coordIdx === coordsCount - 1) return;
 
     const stopIdx = Math.min(coordIdx, stops.length - 1);
-    if (!newStopsOrder[tripIndex]) {
-      newStopsOrder[tripIndex] = stops[stopIdx];
+    if (tripIdx < tripIndexToStopIndex.length && tripIndexToStopIndex[tripIdx] === null) {
+      tripIndexToStopIndex[tripIdx] = stopIdx;
     }
   });
 
-  const finalOrdered = newStopsOrder.filter(Boolean);
+  const newStops = tripIndexToStopIndex.map(i => stops[i]).filter(Boolean);
 
-  if (finalOrdered.length === stops.length) {
-    stops = finalOrdered;
-    optimizedStops = finalOrdered;
+  if (newStops.length === stops.length) {
+    stops = newStops;
+    optimizedStops = newStops;
+    window._osrmTripIndexToStopIndex = tripIndexToStopIndex;
     renderStops();
+  } else {
+    window._osrmTripIndexToStopIndex = null;
   }
 
   const totalDist = (trip.distance / 1000).toFixed(1);
@@ -867,9 +869,14 @@ function displayTrip(trip, waypoints, coordsCount, coordsStops) {
     <div class="route-steps">
   `;
 
+  const indexMap = window._osrmTripIndexToStopIndex || stops.map((_, i) => i);
+
   trip.legs.forEach((leg, i) => {
-    const from = stops[i].name.split(',')[0];
-    const to   = stops[(i+1) % stops.length].name.split(',')[0];
+    const fromIdx = indexMap[i];
+    const toIdx   = indexMap[(i + 1) % indexMap.length];
+
+    const from = stops[fromIdx].name.split(',')[0];
+    const to   = stops[toIdx].name.split(',')[0];
     const dist = (leg.distance / 1000).toFixed(1);
     const mins = Math.round(leg.duration / 60);
     const hh   = Math.floor(mins / 60);
