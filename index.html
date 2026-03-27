@@ -281,28 +281,27 @@
         <button class="mode-btn" data-mode="walking" onclick="setMode(this)">🚶 A pie</button>
       </div>
 
-      <button class="calc-btn" id="calcBtn" disabled onclick="calcularRuta()">
-        ⚡ CALCULAR RUTA ÓPTIMA
-      </button>
+<button class="calc-btn" id="calcBtn" disabled onclick="calcularRuta()">
+  ⚡ CALCULAR RUTA ÓPTIMA
+</button>
 
-      <button
-        id="roundTripBtn"
-        onclick="toggleRoundTrip()"
-        style="
-          margin-top:6px;
-          padding:8px 10px;
-          border-radius:8px;
-          border:1px dashed var(--border);
-          background:var(--panel2);
-          color:var(--muted);
-          font-family:'DM Mono',monospace;
-          font-size:11px;
-          cursor:pointer;
-        "
-      >
-        ⟳ Volver al origen (desactivado)
-      </button>
-    </div>
+<button
+  id="roundTripBtn"
+  onclick="toggleRoundTrip()"
+  style="
+    margin-top:6px;
+    padding:8px 10px;
+    border-radius:8px;
+    border:1px dashed var(--border);
+    background:var(--panel2);
+    color:var(--muted);
+    font-family:'DM Mono',monospace;
+    font-size:11px;
+    cursor:pointer;
+  "
+>
+  ⟳ Volver al origen (desactivado)
+</button>
 
     <div class="results-panel" id="resultsPanel" style="display:none;"></div>
   </div>
